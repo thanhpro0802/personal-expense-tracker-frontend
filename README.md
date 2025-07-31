@@ -84,15 +84,15 @@ src/
 
 ## 📸 Screenshots
 
-### Dashboard
+### Signin
 ![Signin page Screenshot](./screenshots/Signin.jpeg)
-
+### Signup
 ![Signup page Screenshot](./screenshots/Signup.jpeg)
-
+### Dashboard
 ![Dashboard page Screenshot](./screenshots/Dashboard.jpeg)
-
+### Add
 ![Add Transaction page Screenshot](./screenshots/Add_Transaction.jpeg)
-
+### History
 ![Transaction History page Screenshot](./screenshots/Transaction_History.jpeg)
 
 
