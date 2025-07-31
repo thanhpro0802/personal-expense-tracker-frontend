@@ -85,7 +85,15 @@ src/
 ## 📸 Screenshots
 
 ### Dashboard
-![Dashboard Screenshot](./screenshots/Dashboard.jpeg)
+![Signin page Screenshot](./screenshots/Signin.jpeg)
+
+![Signup page Screenshot](./screenshots/Signup.jpeg)
+
+![Dashboard page Screenshot](./screenshots/Dashboard.jpeg)
+
+![Add Transaction page Screenshot](./screenshots/Add_Transaction.jpeg)
+
+![Transaction History page Screenshot](./screenshots/Transaction_History.jpeg)
 
 
 ## ✨ Author
