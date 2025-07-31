@@ -82,6 +82,12 @@ src/
 └── main.jsx
 ```
 
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard Screenshot](./screenshots/Dashboard.jpeg)
+
+
 ## ✨ Author
 
 **Nguyễn Tuấn Thành**
