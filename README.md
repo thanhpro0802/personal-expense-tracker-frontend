@@ -91,9 +91,9 @@ src/
 ### Dashboard
 ![Dashboard page Screenshot](./screenshots/Dashboard.jpeg)
 ### Add
-![Add Transaction page Screenshot](./screenshots/Add_Transaction.jpeg)
+![Add Transaction page Screenshot](./screenshots/AddTransaction.jpeg)
 ### History
-![Transaction History page Screenshot](./screenshots/Transaction_History.jpeg)
+![Transaction History page Screenshot](./screenshots/TransactionHistory.jpeg)
 
 
 ## ✨ Author
