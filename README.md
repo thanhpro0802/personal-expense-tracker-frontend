@@ -1,4 +1,11 @@
 # Expense Tracker - Frontend (React)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Recharts](https://img.shields.io/badge/Recharts-2.x-FF6363?logo=recharts&logoColor=white)](https://recharts.org/)
+[![JWT](https://img.shields.io/badge/Auth-JWT-F0C808?logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 
 Đây là dự án frontend cho ứng dụng Quản lý Chi tiêu (Expense Tracker), được xây dựng bằng **React** và **Vite**. Giao diện người dùng được thiết kế để cung cấp trải nghiệm mượt mà, giúp người dùng dễ dàng quản lý tài chính cá nhân.
 
@@ -36,7 +43,7 @@ Dự án này giao tiếp với một backend **Spring Boot** an toàn để x�
 1.  **Clone repository về máy:**
     ```bash
     git clone https://github.com/thanhpro0802/personal-expense-tracker-frontend.git
-    cd your-frontend-repo
+    cd personal-expense-tracker-frontend
     ```
 
 2.  **Cài đặt các gói phụ thuộc:**
@@ -103,7 +110,7 @@ src/
 - 🔗 GitHub: - 🔗 GitHub: [https://github.com/thanhpro0802](https://github.com/thanhpro0802)
 - 🎓 Hanoi University of Science and Technology (HUST)
 - 📚 Major: Information Technology – Việt Nhật Program
-- 📧 Email: tuanthanh.work@gmail.com *(nếu bạn muốn public)*
+- 📧 Email: tuanthanh.work@gmail.com
 
 ---
 
