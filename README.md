@@ -86,7 +86,7 @@ src/
 
 **Nguyễn Tuấn Thành**
 
-- 🔗 GitHub: gihttps://github.com/thanhpro0802
+- 🔗 GitHub: - 🔗 GitHub: [https://github.com/thanhpro0802](https://github.com/thanhpro0802)
 - 🎓 Hanoi University of Science and Technology (HUST)
 - 📚 Major: Information Technology – Việt Nhật Program
 - 📧 Email: tuanthanh.work@gmail.com *(nếu bạn muốn public)*
