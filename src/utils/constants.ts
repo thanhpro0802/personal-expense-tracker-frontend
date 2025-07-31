@@ -15,7 +15,7 @@ export const CATEGORIES = [
   'Other'
 ];
 export type Category = typeof CATEGORIES[number];
-export const CATEGORY_COLORS = {
+export const CATEGORY_COLORS: { [key: string]: string } = {
   'Food & Dining': '#FF6B6B',
   'Transportation': '#4ECDC4',
   'Shopping': '#45B7D1',

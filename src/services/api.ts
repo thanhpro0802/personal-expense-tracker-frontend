@@ -4,8 +4,8 @@
  */
 
 import {
-  User, Transaction, LoginCredentials, RegisterCredentials,
-  TransactionFormData, DashboardStats, ApiResponse, TransactionFilters
+    User, Transaction, LoginCredentials, RegisterCredentials,
+    TransactionFormData, DashboardStats, ApiResponse, TransactionFilters, PaginatedTransactions
 } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 
@@ -14,125 +14,147 @@ import { STORAGE_KEYS } from '../utils/constants';
 -------------------------------------------------- */
 const API_BASE = 'http://localhost:8081';
 
-const getToken = () => localStorage.getItem(STORAGE_KEYS.TOKEN);
-
-const authHeader = () => {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 const request = async <T>(
     endpoint: string,
     options: RequestInit = {}
 ): Promise<T> => {
     const url = `${API_BASE}${endpoint}`;
-
     const headers = new Headers(options.headers || {});
     headers.set('Content-Type', 'application/json');
 
-    const token = getToken();
-    if (token) headers.set('Authorization', `Bearer ${token}`);
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
 
-    const config: RequestInit = {
-        ...options,
-        headers,
-    };
+    const config: RequestInit = { ...options, headers };
 
-    const res = await fetch(url, config);
-    const data = await res.json();
-    if (!res.ok) throw new Error((data as any).message || 'Request failed');
-    return data;
+    try {
+        const res = await fetch(url, config);
+        const data = await res.json();
+
+        if (!res.ok) {
+            // Cố gắng lấy message lỗi từ response của backend
+            const errorMessage = (data as any)?.message || (data as any)?.error || `HTTP ${res.status}: ${res.statusText}`;
+            throw new Error(errorMessage);
+        }
+        return data;
+    } catch (error) {
+        console.error(`Request to ${url} failed:`, error);
+        throw error;
+    }
 };
-
 
 /* -------------------------------------------------
    Auth endpoints
 -------------------------------------------------- */
 export const authAPI = {
-    login: async (creds: LoginCredentials) => {
+    login: async (creds: LoginCredentials): Promise<ApiResponse<{ user: User; token: string }>> => {
         try {
             const data = await request<{ user: User; token: string }>('/api/auth/signin', {
                 method: 'POST',
                 body: JSON.stringify(creds),
             });
-
-            return {
-                success: true,
-                data,
-            };
+            return { success: true, data };
         } catch (error: any) {
-            return {
-                success: false,
-                message: error.message || 'Login failed',
-            };
+            return { success: false, message: error.message };
         }
     },
 
-    register: async (creds: RegisterCredentials) => {
+    register: async (creds: RegisterCredentials): Promise<ApiResponse<{ message: string }>> => {
         try {
             const data = await request<{ message: string }>('/api/auth/signup', {
                 method: 'POST',
                 body: JSON.stringify(creds),
             });
-
-            return {
-                success: true,
-                data,
-            };
+            return { success: true, data };
         } catch (error: any) {
-            return {
-                success: false,
-                message: error.message || 'Registration failed',
-            };
+            return { success: false, message: error.message };
         }
     },
 };
-
 
 /* -------------------------------------------------
    Transaction endpoints
 -------------------------------------------------- */
 export const transactionAPI = {
-  getTransactions: (filters?: TransactionFilters, page = 1, limit = 10) => {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
-      ...(filters?.type && filters.type !== 'all' && { type: filters.type }),
-      ...(filters?.category && { category: filters.category }),
-      ...(filters?.search && { search: filters.search }),
-      ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
-      ...(filters?.dateTo && { dateTo: filters.dateTo }),
-    });
+    // --- SỬA LỖI Ở ĐÂY ---
+    getTransactions: async (filters?: TransactionFilters, page = 0, size = 10): Promise<ApiResponse<PaginatedTransactions>> => {
+        try {
+            // Đổi tên tham số từ 'limit' -> 'size' để khớp với backend
+            const params = new URLSearchParams({
+                page: String(page),
+                size: String(size), // <-- SỬA LỖI QUAN TRỌNG NHẤT
+                // Giữ lại logic filter
+                ...(filters?.sort && { sort: filters.sort }),
+                ...(filters?.type && filters.type !== 'all' && { type: filters.type }),
+                ...(filters?.category && { category: filters.category }),
+                ...(filters?.search && { search: filters.search }),
+                ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
+                ...(filters?.dateTo && { dateTo: filters.dateTo }),
+            });
 
-    return request<ApiResponse<{
-      transactions: Transaction[];
-      totalCount: number;
-      totalPages: number;
-    }>>(`/transactions?${params}`);
-  },
+            // Backend trả về đối tượng Page của Spring, có cấu trúc content, totalPages, totalElements
+            const data = await request<any>(`/api/transactions?${params}`);
 
-  createTransaction: (data: TransactionFormData) =>
-      request<ApiResponse<Transaction>>('/transactions', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+            // Chuyển đổi cấu trúc trả về của Spring Page thành cấu trúc mà frontend mong đợi
+            const formattedData: PaginatedTransactions = {
+                transactions: data.content,
+                totalCount: data.totalElements,
+                totalPages: data.totalPages,
+            };
 
-  updateTransaction: (id: string, data: TransactionFormData) =>
-      request<ApiResponse<Transaction>>(`/transactions/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
+            return {
+                success: true,
+                data: formattedData,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.message || 'Failed to load transactions',
+            };
+        }
+    },
 
-  deleteTransaction: (id: string) =>
-      request<ApiResponse<{ message: string }>>(`/transactions/${id}`, {
-        method: 'DELETE',
-      }),
+    createTransaction: async (data: TransactionFormData): Promise<ApiResponse<Transaction>> => {
+        try {
+            const result = await request<Transaction>('/api/transactions', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+            return { success: true, data: result };
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    },
+
+    updateTransaction: async (id: string, data: TransactionFormData): Promise<ApiResponse<Transaction>> => {
+        try {
+            const result = await request<Transaction>(`/api/transactions/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(data),
+            });
+            return { success: true, data: result };
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    },
+
+    deleteTransaction: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+        try {
+            const result = await request<{ message: string }>(`/api/transactions/${id}`, {
+                method: 'DELETE',
+            });
+            return { success: true, data: result };
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    },
 };
 
 /* -------------------------------------------------
    Dashboard endpoints
 -------------------------------------------------- */
 export const dashboardAPI = {
-  getStats: () =>
-      request<ApiResponse<DashboardStats>>('/dashboard/stats'),
+    getStats: () => request<ApiResponse<DashboardStats>>('/api/dashboard/stats'),
 };

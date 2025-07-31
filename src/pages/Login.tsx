@@ -7,8 +7,13 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { LoginCredentials } from '../types';
+import { useNavigate } from 'react-router-dom'; // Đảm bảo bạn đã import
+import { useContext } from 'react'; // Import nếu bạn dùng context trực tiếp
+import { AuthContext } from '../contexts/AuthProvider'; // Import context
 
 export default function Login() {
+  const navigate = useNavigate();
+  const auth = useContext(AuthContext);
   const { login, isLoading, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState<LoginCredentials>({
     username: '',
@@ -56,14 +61,20 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth) return;
 
-    if (!validateForm()) {
-      return;
-    }
+    console.log('1. [Login Page] - Bắt đầu quá trình đăng nhập...');
 
-    const result = await login(formData);
-    if (!result.success) {
-      setLoginError(result.message || 'Login failed');
+    const result = await auth.login(formData); // Giả sử formData chứa username/password
+
+    console.log('2. [Login Page] - Kết quả từ hàm login:', result);
+
+    if (result.success) {
+      console.log('3. [Login Page] - Đăng nhập thành công! Chuẩn bị chuyển hướng đến /');
+      navigate('/'); // Sử dụng navigate để chuyển hướng
+    } else {
+      // Xử lý lỗi
+      console.error('Login failed on UI:', result.message);
     }
   };
 

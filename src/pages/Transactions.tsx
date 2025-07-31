@@ -78,16 +78,16 @@ export default function Transactions() {
             setIsLoading(true);
             const response = await transactionAPI.getTransactions(
                 filters,
-                currentPage,
+                currentPage - 1, // Gửi page 0 cho trang đầu tiên
                 PAGE_SIZE
             );
 
-            if (response.success) {
+            if (response.success && response.data) {
                 setTransactions(response.data.transactions);
                 setTotalPages(response.data.totalPages);
                 setTotalCount(response.data.totalCount);
             } else {
-                toast.error('Failed to load transactions');
+                toast.error(response.message || 'Failed to load transactions');
             }
         } catch (error) {
             console.error('Load transactions error:', error);
@@ -121,6 +121,12 @@ export default function Transactions() {
      * Clear all filters
      */
     const clearFilters = () => {
+        // Reset input value manually
+        const searchInput = document.getElementById('search') as HTMLInputElement;
+        if (searchInput) {
+            searchInput.value = '';
+        }
+
         setFilters({
             search: '',
             type: 'all',
@@ -139,11 +145,15 @@ export default function Transactions() {
 
         setIsDeleting(true);
         try {
-            const response = await transactionAPI.deleteTransaction(deleteTransaction.id);
+            const response = await transactionAPI.deleteTransaction(String(deleteTransaction.id));
 
             if (response.success) {
                 toast.success('Transaction deleted successfully');
-                loadTransactions();
+                if (transactions.length === 1 && currentPage > 1) {
+                    setCurrentPage(currentPage - 1);
+                } else {
+                    loadTransactions();
+                }
             } else {
                 toast.error(response.message || 'Failed to delete transaction');
             }
@@ -156,16 +166,10 @@ export default function Transactions() {
         }
     };
 
-    /**
-     * Navigate to add transaction page
-     */
     const goToAddTransaction = () => {
         window.location.hash = '#/add-transaction';
     };
 
-    /**
-     * Get transaction type badge variant
-     */
     const getTypeBadgeVariant = (type: string) => {
         return type === 'income' ? 'default' : 'secondary';
     };
@@ -209,6 +213,8 @@ export default function Transactions() {
                                     <Input
                                         id="search"
                                         placeholder="Search transactions..."
+                                        // Sử dụng defaultValue thay vì value để clearFilters có thể hoạt động
+                                        defaultValue={filters.search}
                                         onChange={(e) => handleSearchChange(e.target.value)}
                                         className="pl-10"
                                     />
@@ -244,7 +250,9 @@ export default function Transactions() {
                                         <SelectValue placeholder="All Categories" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="__all__">All Categories</SelectItem>
+                                        {/* --- SỬA LỖI --- */}
+                                        {/* Dòng <SelectItem value=""> đã được xóa vì nó vi phạm quy tắc của thư viện. */}
+                                        {/* Placeholder trong <SelectValue> ở trên sẽ tự động hiển thị khi giá trị là chuỗi rỗng. */}
                                         {CATEGORIES.map((category) => (
                                             <SelectItem key={category} value={category}>
                                                 {category}
@@ -282,10 +290,9 @@ export default function Transactions() {
                     <CardHeader>
                         <CardTitle>Transactions</CardTitle>
                         <CardDescription>
-                            {currentPage > 1 && (
-                                <>Showing page {currentPage} of {totalPages} • </>
+                            {totalCount > 0 && (
+                                <>Showing {((currentPage - 1) * PAGE_SIZE) + 1} to {Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} transactions</>
                             )}
-                            {transactions.length} of {totalCount} transactions
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -319,8 +326,7 @@ export default function Transactions() {
                                         key={transaction.id}
                                         className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                                     >
-                                        <div className="flex items-center gap-4 flex-1">
-                                            {/* Transaction Icon */}
+                                        <div className="flex items-center gap-4 flex-1 min-w-0">
                                             <div className={cn(
                                                 'p-2 rounded-full',
                                                 transaction.type === 'income'
@@ -334,7 +340,6 @@ export default function Transactions() {
                                                 )}
                                             </div>
 
-                                            {/* Transaction Details */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <h3 className="font-medium text-gray-900 dark:text-white truncate">
@@ -353,8 +358,9 @@ export default function Transactions() {
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {/* Transaction Amount */}
+                                        <div className="flex items-center gap-2 ml-4">
                                             <div className="text-right">
                                                 <p className={cn(
                                                     'text-lg font-semibold',
@@ -366,26 +372,24 @@ export default function Transactions() {
                                                     {formatCurrency(transaction.amount)}
                                                 </p>
                                             </div>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2 ml-4">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-gray-500 hover:text-blue-600"
-                                                disabled
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-gray-500 hover:text-red-600"
-                                                onClick={() => setDeleteTransaction(transaction)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex items-center gap-0">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-gray-500 hover:text-blue-600 h-8 w-8"
+                                                    disabled
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-gray-500 hover:text-red-600 h-8 w-8"
+                                                    onClick={() => setDeleteTransaction(transaction)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -398,7 +402,7 @@ export default function Transactions() {
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Showing {((currentPage - 1) * PAGE_SIZE) + 1} to {Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} transactions
+                            Page {currentPage} of {totalPages}
                         </p>
                         <div className="flex items-center gap-2">
                             <Button
@@ -410,9 +414,6 @@ export default function Transactions() {
                                 <ChevronLeft className="h-4 w-4 mr-1" />
                                 Previous
                             </Button>
-                            <span className="px-3 py-1 text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
                             <Button
                                 variant="outline"
                                 size="sm"

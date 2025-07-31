@@ -1,8 +1,11 @@
-/**
- * Custom hook for managing localStorage operations
- */
-
 import { useState } from 'react';
+
+/**
+ * Check if a string is likely to be JSON (starts with '{' or '[')
+ */
+function isLikelyJSON(value: string): boolean {
+  return typeof value === 'string' && /^[{\[]/.test(value.trim());
+}
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(() => {
@@ -12,25 +15,19 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         return initialValue;
       }
 
-      // Nếu T là string (ví dụ token), không JSON.parse
-      if (typeof initialValue === 'string') {
-        return item as T;
-      }
-
-      return JSON.parse(item);
+      return isLikelyJSON(item) ? JSON.parse(item) : (item as unknown as T);
     } catch (error) {
       console.error(`❌ Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
+
   const setValue = (value: T | ((val: T) => T)) => {
     try {
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
       const serialized =
-          typeof valueToStore === 'string'
-              ? valueToStore
-              : JSON.stringify(valueToStore);
+          typeof valueToStore === 'string' ? valueToStore : JSON.stringify(valueToStore);
       window.localStorage.setItem(key, serialized);
     } catch (error) {
       console.error(`❌ Error setting localStorage key "${key}":`, error);
