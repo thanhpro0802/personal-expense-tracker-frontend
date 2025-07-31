@@ -82,6 +82,14 @@ src/
 └── main.jsx
 ```
 
-## ✍️ Tác giả
+## ✨ Author
 
-Dự án được phát triển bởi **thanhpro0802**.
+**Nguyễn Tuấn Thành**
+
+- 🔗 GitHub: gihttps://github.com/thanhpro0802
+- 🎓 Hanoi University of Science and Technology (HUST)
+- 📚 Major: Information Technology – Việt Nhật Program
+- 📧 Email: tuanthanh.work@gmail.com *(nếu bạn muốn public)*
+
+---
+
