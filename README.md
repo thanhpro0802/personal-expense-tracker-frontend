@@ -25,7 +25,6 @@ This frontend communicates with a secure **Spring Boot** backend that handles us
 - **Framework:** [React 18+](https://reactjs.org/)
 - **Build Tool:** [Vite](https://vitejs.dev/)
 - **Routing:** [React Router DOM](https://reactrouter.com/)
-- **API Requests:** [Axios](https://axios-http.com/)
 - **State Management:** React Context API (or Redux/Zustand if used)
 - **Styling:** CSS / SASS / Tailwind CSS (based on project preference)
 
