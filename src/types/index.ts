@@ -31,6 +31,7 @@ export interface Transaction {
 export interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -107,4 +108,23 @@ export interface ChartData {
   category: string;
   amount: number;
   color: string;
+}
+
+// Refresh Token Authentication Types
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+  tokenType: string;
+  expiresIn: number;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
 }

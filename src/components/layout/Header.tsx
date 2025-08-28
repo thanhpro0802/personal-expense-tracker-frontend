@@ -45,9 +45,15 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   /**
    * Handle logout
    */
-  const handleLogout = () => {
-    logout();
-    window.location.hash = '#/login';
+  const handleLogout = async () => {
+    try {
+      await logout();
+      window.location.hash = '#/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still redirect to login even if logout fails
+      window.location.hash = '#/login';
+    }
   };
 
   return (
