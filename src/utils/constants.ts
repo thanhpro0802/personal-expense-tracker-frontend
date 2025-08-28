@@ -29,15 +29,21 @@ export const CATEGORY_COLORS: { [key: string]: string } = {
 } as const;
 
 export const API_ENDPOINTS = {
-  LOGIN: '/api/auth/login',
-  REGISTER: '/api/auth/register',
+  LOGIN: '/api/auth/signin',
+  REGISTER: '/api/auth/signup', 
+  REFRESH_TOKEN: '/api/auth/refreshtoken',
+  LOGOUT: '/api/auth/signout',
   TRANSACTIONS: '/api/transactions',
   DASHBOARD_STATS: '/api/dashboard/stats'
 } as const;
 
 export const STORAGE_KEYS = {
-  TOKEN: 'expense_tracker_token',
-  USER: 'expense_tracker_user'
+  ACCESS_TOKEN: 'expense_tracker_access_token',
+  REFRESH_TOKEN: 'expense_tracker_refresh_token',
+  USER: 'expense_tracker_user',
+  TOKEN_EXPIRY: 'expense_tracker_token_expiry',
+  // Keep old key for backward compatibility during migration
+  TOKEN: 'expense_tracker_token'
 } as const;
 
 export const PAGINATION = {
