@@ -60,7 +60,7 @@ To run this project on your local machine, follow the steps below:
     Create a `.env` file in the root directory of the project and add the following:
 
     ```env
-    VITE_API_URL=http://localhost:8080
+    VITE_API_URL=http://localhost:8081
     ```
 
     *Note: `8080` is the default port for Spring Boot. Change it if you’re using a different one.*
