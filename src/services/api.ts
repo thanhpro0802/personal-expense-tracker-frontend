@@ -15,6 +15,51 @@ import { STORAGE_KEYS } from '../utils/constants';
 -------------------------------------------------- */
 const API_BASE = 'http://localhost:8081';
 
+// ---- Helpers ----
+function isAuthEndpoint(endpoint: string) {
+    return endpoint.startsWith('/api/auth/');
+}
+
+function isLikelyJwt(token?: string | null) {
+    return !!token && token.split('.').length === 3;
+}
+
+function decodeJwtExp(accessToken: string): number | null {
+    try {
+        const [, payload] = accessToken.split('.');
+        if (!payload) return null;
+        const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        // exp là epoch seconds
+        return typeof json.exp === 'number' ? json.exp : null;
+    } catch {
+        return null;
+    }
+}
+
+function computeExpiresInSecondsFromJwt(accessToken: string): number {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const exp = decodeJwtExp(accessToken);
+    if (!exp) {
+        // fallback an toàn: 15 phút
+        return 15 * 60;
+    }
+    // đảm bảo tối thiểu 60s để tránh jitter
+    return Math.max(60, exp - nowSec);
+}
+
+// Parse JSON an toàn (tránh "Unexpected end of JSON input")
+async function parseJsonSafe<T = any>(res: Response): Promise<T | null> {
+    const ct = res.headers.get('content-type') || '';
+    const text = await res.text(); // luôn đọc text trước
+    if (!text) return null;
+    if (!ct.includes('application/json')) return null;
+    try {
+        return JSON.parse(text) as T;
+    } catch {
+        return null;
+    }
+}
+
 // Token management utilities
 export class TokenManager {
     private static refreshPromise: Promise<boolean> | null = null;
@@ -29,14 +74,23 @@ export class TokenManager {
 
     static getTokenExpiry(): number | null {
         const expiry = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
-        return expiry ? parseInt(expiry, 10) : null;
+        const n = expiry ? parseInt(expiry, 10) : NaN;
+        return Number.isFinite(n) ? n : null;
     }
 
-    static setTokens(accessToken: string, refreshToken: string, expiresIn: number): void {
-        const expiryTime = Date.now() + (expiresIn * 1000);
+    static setTokens(accessToken: string, refreshToken: string, expiresInSeconds: number): void {
+        const expiryTime = Date.now() + (expiresInSeconds * 1000);
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
         localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-        localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiryTime.toString());
+        localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(expiryTime));
+        // Back-compat
+        localStorage.setItem(STORAGE_KEYS.TOKEN, accessToken);
+    }
+
+    // Tiện ích khi backend không trả expiresIn
+    static setTokensFromJwt(accessToken: string, refreshToken: string): void {
+        const expIn = computeExpiresInSecondsFromJwt(accessToken);
+        this.setTokens(accessToken, refreshToken, expIn);
     }
 
     static clearTokens(): void {
@@ -60,7 +114,6 @@ export class TokenManager {
         if (this.refreshPromise) {
             return this.refreshPromise;
         }
-
         this.refreshPromise = this.performTokenRefresh();
         const result = await this.refreshPromise;
         this.refreshPromise = null;
@@ -77,9 +130,7 @@ export class TokenManager {
         try {
             const response = await fetch(`${API_BASE}/api/auth/refreshtoken`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken }),
             });
 
@@ -87,8 +138,15 @@ export class TokenManager {
                 throw new Error('Failed to refresh token');
             }
 
-            const data: RefreshTokenResponse = await response.json();
-            this.setTokens(data.accessToken, refreshToken, data.expiresIn);
+            const data = await parseJsonSafe<RefreshTokenResponse>(response);
+            if (!data || !data.accessToken) {
+                throw new Error('Invalid refresh response');
+            }
+
+            // Backend hiện không trả expiresIn → tính từ JWT exp
+            const newAccess = data.accessToken;
+            const newRefresh = (data as any).refreshToken || refreshToken; // server trả lại refresh cũ
+            this.setTokensFromJwt(newAccess, newRefresh);
             return true;
         } catch (error) {
             console.error('Token refresh failed:', error);
@@ -104,26 +162,24 @@ const request = async <T>(
 ): Promise<T> => {
     const url = `${API_BASE}${endpoint}`;
     const headers = new Headers(options.headers || {});
-    headers.set('Content-Type', 'application/json');
+    if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+    }
 
-    // Try to get access token, refresh if needed
+    // Try to get access token, refresh if needed (except for auth endpoints)
     let token = TokenManager.getAccessToken();
-    
-    // Check if token is expired and refresh if needed (except for auth endpoints)
-    if (token && TokenManager.isTokenExpired() && !endpoint.includes('/api/auth/')) {
+
+    if (token && TokenManager.isTokenExpired() && !isAuthEndpoint(endpoint)) {
         const refreshed = await TokenManager.refreshAccessToken();
-        if (refreshed) {
-            token = TokenManager.getAccessToken();
-        } else {
-            // Refresh failed, redirect to login
-            if (typeof window !== 'undefined') {
-                window.location.hash = '#/login';
-            }
+        token = refreshed ? TokenManager.getAccessToken() : null;
+        if (!token) {
+            if (typeof window !== 'undefined') window.location.hash = '#/login';
             throw new Error('Session expired. Please login again.');
         }
     }
 
-    if (token) {
+    // KHÔNG gắn Authorization cho /api/auth/**
+    if (!isAuthEndpoint(endpoint) && isLikelyJwt(token)) {
         headers.set('Authorization', `Bearer ${token}`);
     }
 
@@ -131,41 +187,37 @@ const request = async <T>(
 
     try {
         const res = await fetch(url, config);
-        const data = await res.json();
+        const data = await parseJsonSafe<T>(res);
 
-        // Handle 401 responses with retry logic
-        if (res.status === 401 && !endpoint.includes('/api/auth/')) {
+        // Handle 401 responses with retry logic (cho endpoint bảo vệ)
+        if (res.status === 401 && !isAuthEndpoint(endpoint)) {
             const refreshed = await TokenManager.refreshAccessToken();
             if (refreshed) {
-                // Retry the original request with new token
                 const newToken = TokenManager.getAccessToken();
-                if (newToken) {
-                    headers.set('Authorization', `Bearer ${newToken}`);
-                    const retryConfig: RequestInit = { ...options, headers };
-                    const retryRes = await fetch(url, retryConfig);
-                    const retryData = await retryRes.json();
-                    
-                    if (!retryRes.ok) {
-                        const errorMessage = (retryData as any)?.message || (retryData as any)?.error || `HTTP ${retryRes.status}: ${retryRes.statusText}`;
-                        throw new Error(errorMessage);
-                    }
-                    return retryData;
+                const retryHeaders = new Headers(headers);
+                if (isLikelyJwt(newToken)) {
+                    retryHeaders.set('Authorization', `Bearer ${newToken}`);
+                } else {
+                    retryHeaders.delete('Authorization');
                 }
+                const retryRes = await fetch(url, { ...options, headers: retryHeaders });
+                const retryData = await parseJsonSafe<T>(retryRes);
+                if (!retryRes.ok) {
+                    const msg = (retryData as any)?.message || (retryData as any)?.error || `HTTP ${retryRes.status}: ${retryRes.statusText}`;
+                    throw new Error(msg);
+                }
+                return (retryData as T) ?? ({} as T);
             } else {
-                // Refresh failed, redirect to login
-                if (typeof window !== 'undefined') {
-                    window.location.hash = '#/login';
-                }
+                if (typeof window !== 'undefined') window.location.hash = '#/login';
                 throw new Error('Session expired. Please login again.');
             }
         }
 
         if (!res.ok) {
-            // Cố gắng lấy message lỗi từ response của backend
-            const errorMessage = (data as any)?.message || (data as any)?.error || `HTTP ${res.status}: ${res.statusText}`;
-            throw new Error(errorMessage);
+            const msg = (data as any)?.message || (data as any)?.error || `HTTP ${res.status}: ${res.statusText}`;
+            throw new Error(msg);
         }
-        return data;
+        return (data as T) ?? ({} as T);
     } catch (error) {
         console.error(`Request to ${url} failed:`, error);
         throw error;
@@ -176,12 +228,20 @@ const request = async <T>(
    Auth endpoints
 -------------------------------------------------- */
 export const authAPI = {
+    // Lưu ý: KHÔNG tự động gắn Authorization ở request()
     login: async (creds: LoginCredentials): Promise<ApiResponse<LoginResponse>> => {
         try {
             const data = await request<LoginResponse>('/api/auth/signin', {
                 method: 'POST',
                 body: JSON.stringify(creds),
             });
+
+            // Backend trả: { token, refreshToken, id, username, email }
+            // Tự tính expiresIn từ JWT exp để lưu
+            if ((data as any)?.token && (data as any)?.refreshToken) {
+                TokenManager.setTokensFromJwt((data as any).token, (data as any).refreshToken);
+            }
+
             return { success: true, data };
         } catch (error: any) {
             return { success: false, message: error.message };
@@ -206,6 +266,13 @@ export const authAPI = {
                 method: 'POST',
                 body: JSON.stringify(refreshTokenReq),
             });
+
+            // Đồng bộ storage nếu gọi trực tiếp
+            if ((data as any)?.accessToken) {
+                const rt = (data as any)?.refreshToken || TokenManager.getRefreshToken();
+                TokenManager.setTokensFromJwt((data as any).accessToken, rt || '');
+            }
+
             return { success: true, data };
         } catch (error: any) {
             return { success: false, message: error.message };
@@ -240,7 +307,6 @@ export const transactionAPI = {
             const params = new URLSearchParams({
                 page: String(page),
                 size: String(size), // <-- SỬA LỖI QUAN TRỌNG NHẤT
-                // Giữ lại logic filter
                 ...(filters?.sort && { sort: filters.sort }),
                 ...(filters?.type && filters.type !== 'all' && { type: filters.type }),
                 ...(filters?.category && { category: filters.category }),
@@ -252,22 +318,15 @@ export const transactionAPI = {
             // Backend trả về đối tượng Page của Spring, có cấu trúc content, totalPages, totalElements
             const data = await request<any>(`/api/transactions?${params}`);
 
-            // Chuyển đổi cấu trúc trả về của Spring Page thành cấu trúc mà frontend mong đợi
             const formattedData: PaginatedTransactions = {
                 transactions: data.content,
                 totalCount: data.totalElements,
                 totalPages: data.totalPages,
             };
 
-            return {
-                success: true,
-                data: formattedData,
-            };
+            return { success: true, data: formattedData };
         } catch (error: any) {
-            return {
-                success: false,
-                message: error.message || 'Failed to load transactions',
-            };
+            return { success: false, message: error.message || 'Failed to load transactions' };
         }
     },
 
