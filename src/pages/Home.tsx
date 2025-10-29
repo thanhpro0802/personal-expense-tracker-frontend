@@ -15,6 +15,7 @@ import ExpenseChart from '../components/dashboard/ExpenseChart';
 import RecentTransactions from '../components/dashboard/RecentTransactions';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../hooks/useAuth';
+import { useWallet } from '../contexts/WalletContext';
 import { dashboardAPI } from '../services/api';
 import { DashboardStats, ChartData } from '../types';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
   const { user } = useAuth();
+  const { currentWallet } = useWallet();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function Home() {
       const month = selectedDate.getMonth() + 1;
       const year = selectedDate.getFullYear();
 
-      const response = await dashboardAPI.getStats(month, year);
+      const response = await dashboardAPI.getStats(month, year, currentWallet?.id);
 
       if (response.success && response.data) {
         setStats(response.data);
@@ -54,7 +56,7 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, currentWallet]);
 
   useEffect(() => {
     loadDashboardData();

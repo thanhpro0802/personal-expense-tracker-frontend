@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import { budgetAPI } from '../services/api';
 import { Budget, BudgetDTO } from '../types';
 import { useBudgets } from '../contexts/BudgetContext';
+import { useWallet } from '../contexts/WalletContext';
 import { CATEGORIES } from '../utils/constants';
 import { formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
@@ -26,13 +27,14 @@ const BudgetsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [formState, setFormState] = useState({ category: '', amount: '' });
     const { budgetsVersion } = useBudgets();
+    const { currentWallet } = useWallet();
 
     const fetchBudgets = useCallback(async () => {
         setLoading(true);
         try {
             const month = selectedDate.getMonth() + 1;
             const year = selectedDate.getFullYear();
-            const response = await budgetAPI.getBudgets(month, year);
+            const response = await budgetAPI.getBudgets(month, year, currentWallet?.id);
             if (response.success && response.data) {
                 setBudgets(response.data);
             } else {
@@ -43,7 +45,7 @@ const BudgetsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedDate]);
+    }, [selectedDate, currentWallet]);
 
     useEffect(() => {
         fetchBudgets();
@@ -85,7 +87,7 @@ const BudgetsPage: React.FC = () => {
         };
 
         try {
-            const response = await budgetAPI.createOrUpdateBudget(budgetData);
+            const response = await budgetAPI.createOrUpdateBudget(budgetData, currentWallet?.id);
             if (response.success) {
                 toast.success(editingBudget ? 'Budget updated successfully!' : 'Budget created successfully!');
                 handleCloseModal();
