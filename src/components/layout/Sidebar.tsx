@@ -9,7 +9,6 @@ import {
   X,
   Wallet, // Icon cho Ngân sách
   Repeat, // Icon cho Giao dịch định kỳ
-  Briefcase, // Icon cho Ví
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
@@ -54,11 +53,6 @@ const navItems: NavItem[] = [
     label: 'Recurring',
     path: '/recurring-transactions',
     icon: Repeat,
-  },
-  {
-    label: 'Wallets',
-    path: '/wallets',
-    icon: Briefcase,
   },
 ];
 

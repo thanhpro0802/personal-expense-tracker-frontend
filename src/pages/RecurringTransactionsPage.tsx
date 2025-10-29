@@ -13,7 +13,6 @@ import { Plus, Edit, Trash2, Loader2, Repeat, CalendarIcon, AlertCircle } from '
 import Layout from '@/components/layout/Layout';
 import { recurringTransactionAPI } from '@/services/api';
 import { RecurringTransaction, Frequency, Category } from '@/types';
-import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -23,7 +22,6 @@ const RecurringTransactionsPage: React.FC = () => {
     const [transactions, setTransactions] = useState<RecurringTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { currentWallet } = useWallet();
 
     // State for modals
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,7 +33,7 @@ const RecurringTransactionsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await recurringTransactionAPI.getAll(currentWallet?.id);
+            const response = await recurringTransactionAPI.getAll();
             if (response.success && response.data) {
                 setTransactions(response.data);
             } else {
@@ -47,7 +45,7 @@ const RecurringTransactionsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentWallet]);
+    }, []);
 
     useEffect(() => {
         fetchTransactions();
@@ -72,7 +70,7 @@ const RecurringTransactionsPage: React.FC = () => {
 
         try {
             // Gọi API để cập nhật backend
-            const response = await recurringTransactionAPI.update(id, { isActive: !currentStatus }, currentWallet?.id);
+            const response = await recurringTransactionAPI.update(id, { isActive: !currentStatus });
             if (!response.success) {
                 throw new Error(response.message || 'Failed to update status.');
             }
@@ -128,8 +126,8 @@ const RecurringTransactionsPage: React.FC = () => {
 
             try {
                 const response = editingTransaction
-                    ? await recurringTransactionAPI.update(editingTransaction.id!, submissionData, currentWallet?.id)
-                    : await recurringTransactionAPI.create(submissionData, currentWallet?.id);
+                    ? await recurringTransactionAPI.update(editingTransaction.id!, submissionData)
+                    : await recurringTransactionAPI.create(submissionData);
 
                 if (response.success) {
                     toast.success(`Rule ${editingTransaction ? 'updated' : 'created'} successfully!`);
