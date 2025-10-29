@@ -2,6 +2,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthProvider';
 import { BudgetContextProvider } from './contexts/BudgetContext';
+import { WalletProvider } from './contexts/WalletContext';
 // Các trang hiện có
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -13,11 +14,13 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 // --- BƯỚC 1: IMPORT CÁC TRANG MỚI ---
 import BudgetsPage from './pages/BudgetsPage';
 import RecurringTransactionsPage from './pages/RecurringTransactionsPage';
+import WalletsPage from './pages/WalletsPage';
 
 
 export default function App() {
     return (
         <AuthProvider>
+            <WalletProvider>
             <BudgetContextProvider>
             <HashRouter>
                 <Routes>
@@ -34,6 +37,7 @@ export default function App() {
                         {/* --- BƯỚC 2: THÊM CÁC ROUTE MỚI VÀO ĐÂY --- */}
                         <Route path="/budgets" element={<BudgetsPage />} />
                         <Route path="/recurring-transactions" element={<RecurringTransactionsPage />} />
+                        <Route path="/wallets" element={<WalletsPage />} />
                     </Route>
 
                     {/* Route "Not Found" */}
@@ -48,6 +52,7 @@ export default function App() {
                 duration={4000}
             />
             </BudgetContextProvider>
+            </WalletProvider>
         </AuthProvider>
     );
 }

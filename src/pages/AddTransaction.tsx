@@ -17,9 +17,11 @@ import { CATEGORIES } from '../utils/constants';
 import { toast } from 'sonner';
 import { Category } from '../utils/constants';
 import { useBudgets } from '../contexts/BudgetContext'; // <-- 1. IMPORT HOOK MỚI
+import { useWallet } from '../contexts/WalletContext';
 
 export default function AddTransaction() {
   const { triggerBudgetsRefresh } = useBudgets(); // <-- 2. SỬ DỤNG HOOK
+  const { currentWallet } = useWallet();
 
   const [formData, setFormData] = useState<TransactionFormData>({
     title: '',
@@ -98,7 +100,7 @@ export default function AddTransaction() {
 
     setIsLoading(true);
     try {
-      const response = await transactionAPI.createTransaction(formData);
+      const response = await transactionAPI.createTransaction(formData, currentWallet?.id);
 
       if (response.success) {
         toast.success('Transaction added successfully!');

@@ -39,11 +39,13 @@ import { CATEGORIES } from '../utils/constants';
 import { formatCurrency, formatDate, debounce, cn } from '../lib/utils';
 import { toast } from 'sonner';
 import { useBudgets } from '../contexts/BudgetContext'; // <-- 1. IMPORT HOOK MỚI
+import { useWallet } from '../contexts/WalletContext';
 
 const PAGE_SIZE = 10;
 
 export default function Transactions() {
     const { triggerBudgetsRefresh } = useBudgets(); // <-- 2. SỬ DỤNG HOOK
+    const { currentWallet } = useWallet();
 
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -82,7 +84,8 @@ export default function Transactions() {
             const response = await transactionAPI.getTransactions(
                 filters,
                 currentPage - 1, // Gửi page 0 cho trang đầu tiên
-                PAGE_SIZE
+                PAGE_SIZE,
+                currentWallet?.id
             );
 
             if (response.success && response.data) {
@@ -103,7 +106,7 @@ export default function Transactions() {
     // Load transactions when filters or page changes
     useEffect(() => {
         loadTransactions();
-    }, [filters, currentPage]);
+    }, [filters, currentPage, currentWallet]);
 
     /**
      * Handle search input change

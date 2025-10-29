@@ -9,7 +9,11 @@ import {
     LoginResponse, RefreshTokenRequest, RefreshTokenResponse,
     RecurringTransaction,
     Budget,
-    BudgetDTO
+    BudgetDTO,
+    Wallet,
+    WalletMember,
+    CreateWalletRequest,
+    InviteMemberRequest
 } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 
@@ -303,7 +307,7 @@ export const authAPI = {
    Transaction endpoints
 -------------------------------------------------- */
 export const transactionAPI = {
-    getTransactions: async (filters?: TransactionFilters, page = 0, size = 10): Promise<ApiResponse<PaginatedTransactions>> => {
+    getTransactions: async (filters?: TransactionFilters, page = 0, size = 10, walletId?: string): Promise<ApiResponse<PaginatedTransactions>> => {
         try {
             const params = new URLSearchParams({
                 page: String(page),
@@ -314,6 +318,7 @@ export const transactionAPI = {
                 ...(filters?.search && { search: filters.search }),
                 ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
                 ...(filters?.dateTo && { dateTo: filters.dateTo }),
+                ...(walletId && { walletId }),
             });
 
             const data = await request<any>(`/api/transactions?${params}`);
@@ -330,11 +335,12 @@ export const transactionAPI = {
         }
     },
 
-    createTransaction: async (data: TransactionFormData): Promise<ApiResponse<Transaction>> => {
+    createTransaction: async (data: TransactionFormData, walletId?: string): Promise<ApiResponse<Transaction>> => {
         try {
+            const payload = walletId ? { ...data, walletId } : data;
             const result = await request<Transaction>('/api/transactions', {
                 method: 'POST',
-                body: JSON.stringify(data),
+                body: JSON.stringify(payload),
             });
             return { success: true, data: result };
         } catch (error: any) {
@@ -342,11 +348,12 @@ export const transactionAPI = {
         }
     },
 
-    updateTransaction: async (id: string, data: TransactionFormData): Promise<ApiResponse<Transaction>> => {
+    updateTransaction: async (id: string, data: TransactionFormData, walletId?: string): Promise<ApiResponse<Transaction>> => {
         try {
+            const payload = walletId ? { ...data, walletId } : data;
             const result = await request<Transaction>(`/api/transactions/${id}`, {
                 method: 'PUT',
-                body: JSON.stringify(data),
+                body: JSON.stringify(payload),
             });
             return { success: true, data: result };
         } catch (error: any) {
@@ -370,9 +377,13 @@ export const transactionAPI = {
    Dashboard endpoints
 -------------------------------------------------- */
 export const dashboardAPI = {
-    getStats: async (month: number, year: number): Promise<ApiResponse<DashboardStats>> => {
+    getStats: async (month: number, year: number, walletId?: string): Promise<ApiResponse<DashboardStats>> => {
         try {
-            const params = new URLSearchParams({ month: String(month), year: String(year) });
+            const params = new URLSearchParams({ 
+                month: String(month), 
+                year: String(year),
+                ...(walletId && { walletId })
+            });
             const data = await request<ApiResponse<DashboardStats>>(`/api/dashboard/stats?${params}`);
             return data;
         } catch (error: any) {
@@ -385,9 +396,13 @@ export const dashboardAPI = {
    Budget endpoints
 -------------------------------------------------- */
 export const budgetAPI = {
-    getBudgets: async (month: number, year: number): Promise<ApiResponse<BudgetDTO[]>> => {
+    getBudgets: async (month: number, year: number, walletId?: string): Promise<ApiResponse<BudgetDTO[]>> => {
         try {
-            const params = new URLSearchParams({ month: String(month), year: String(year) });
+            const params = new URLSearchParams({ 
+                month: String(month), 
+                year: String(year),
+                ...(walletId && { walletId })
+            });
             const data = await request<BudgetDTO[]>(`/api/budgets?${params}`);
             return { success: true, data };
         } catch (error: any) {
@@ -395,11 +410,12 @@ export const budgetAPI = {
         }
     },
 
-    createOrUpdateBudget: async (budgetData: Budget): Promise<ApiResponse<Budget>> => {
+    createOrUpdateBudget: async (budgetData: Budget, walletId?: string): Promise<ApiResponse<Budget>> => {
         try {
+            const payload = walletId ? { ...budgetData, walletId } : budgetData;
             const data = await request<Budget>('/api/budgets', {
                 method: 'POST',
-                body: JSON.stringify(budgetData),
+                body: JSON.stringify(payload),
             });
             return { success: true, data };
         } catch (error: any) {
@@ -423,20 +439,22 @@ export const budgetAPI = {
    Recurring Transaction endpoints (Bản cập nhật)
 -------------------------------------------------- */
 export const recurringTransactionAPI = {
-    getAll: async (): Promise<ApiResponse<RecurringTransaction[]>> => {
+    getAll: async (walletId?: string): Promise<ApiResponse<RecurringTransaction[]>> => {
         try {
-            const data = await request<RecurringTransaction[]>('/api/recurring-transactions');
+            const params = walletId ? `?walletId=${walletId}` : '';
+            const data = await request<RecurringTransaction[]>(`/api/recurring-transactions${params}`);
             return { success: true, data };
         } catch (error: any) {
             return { success: false, message: error.message || 'Failed to load recurring transactions' };
         }
     },
 
-    create: async (transactionData: Omit<RecurringTransaction, 'id'>): Promise<ApiResponse<RecurringTransaction>> => {
+    create: async (transactionData: Omit<RecurringTransaction, 'id'>, walletId?: string): Promise<ApiResponse<RecurringTransaction>> => {
         try {
+            const payload = walletId ? { ...transactionData, walletId } : transactionData;
             const data = await request<RecurringTransaction>('/api/recurring-transactions', {
                 method: 'POST',
-                body: JSON.stringify(transactionData),
+                body: JSON.stringify(payload),
             });
             return { success: true, data };
         } catch (error: any) {
@@ -444,11 +462,12 @@ export const recurringTransactionAPI = {
         }
     },
 
-    update: async (id: string, transactionData: Partial<RecurringTransaction>): Promise<ApiResponse<RecurringTransaction>> => {
+    update: async (id: string, transactionData: Partial<RecurringTransaction>, walletId?: string): Promise<ApiResponse<RecurringTransaction>> => {
         try {
+            const payload = walletId ? { ...transactionData, walletId } : transactionData;
             const data = await request<RecurringTransaction>(`/api/recurring-transactions/${id}`, {
                 method: 'PUT',
-                body: JSON.stringify(transactionData),
+                body: JSON.stringify(payload),
             });
             return { success: true, data };
         } catch (error: any) {
@@ -465,6 +484,104 @@ export const recurringTransactionAPI = {
             return { success: true };
         } catch (error: any) {
             return { success: false, message: error.message || 'Failed to delete recurring transaction' };
+        }
+    },
+};
+
+/* -------------------------------------------------
+   Wallet endpoints
+-------------------------------------------------- */
+export const walletAPI = {
+    // Get all wallets for current user
+    getWallets: async (): Promise<ApiResponse<Wallet[]>> => {
+        try {
+            const data = await request<Wallet[]>('/api/wallets');
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load wallets' };
+        }
+    },
+
+    // Get wallet by ID
+    getWallet: async (id: string): Promise<ApiResponse<Wallet>> => {
+        try {
+            const data = await request<Wallet>(`/api/wallets/${id}`);
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load wallet' };
+        }
+    },
+
+    // Create new wallet
+    createWallet: async (walletData: CreateWalletRequest): Promise<ApiResponse<Wallet>> => {
+        try {
+            const data = await request<Wallet>('/api/wallets', {
+                method: 'POST',
+                body: JSON.stringify(walletData),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to create wallet' };
+        }
+    },
+
+    // Update wallet
+    updateWallet: async (id: string, walletData: Partial<CreateWalletRequest>): Promise<ApiResponse<Wallet>> => {
+        try {
+            const data = await request<Wallet>(`/api/wallets/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(walletData),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to update wallet' };
+        }
+    },
+
+    // Delete wallet
+    deleteWallet: async (id: string): Promise<ApiResponse<void>> => {
+        try {
+            await request<void>(`/api/wallets/${id}`, {
+                method: 'DELETE',
+            });
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to delete wallet' };
+        }
+    },
+
+    // Get wallet members
+    getWalletMembers: async (walletId: string): Promise<ApiResponse<WalletMember[]>> => {
+        try {
+            const data = await request<WalletMember[]>(`/api/wallets/${walletId}/members`);
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load wallet members' };
+        }
+    },
+
+    // Invite member to wallet
+    inviteMember: async (inviteData: InviteMemberRequest): Promise<ApiResponse<WalletMember>> => {
+        try {
+            const data = await request<WalletMember>(`/api/wallets/${inviteData.walletId}/members`, {
+                method: 'POST',
+                body: JSON.stringify({ usernameOrEmail: inviteData.usernameOrEmail }),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to invite member' };
+        }
+    },
+
+    // Remove member from wallet
+    removeMember: async (walletId: string, memberId: string): Promise<ApiResponse<void>> => {
+        try {
+            await request<void>(`/api/wallets/${walletId}/members/${memberId}`, {
+                method: 'DELETE',
+            });
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to remove member' };
         }
     },
 };
