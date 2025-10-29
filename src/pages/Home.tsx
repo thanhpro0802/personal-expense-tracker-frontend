@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  DollarSign,
   TrendingUp,
   TrendingDown,
   Wallet,
   Plus,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import StatsCard from '../components/dashboard/StatsCard';
@@ -14,42 +15,35 @@ import ExpenseChart from '../components/dashboard/ExpenseChart';
 import RecentTransactions from '../components/dashboard/RecentTransactions';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../hooks/useAuth';
-import { dashboardAPI, transactionAPI } from '../services/api';
-import { DashboardStats, Transaction, ChartData } from '../types';
+import { dashboardAPI } from '../services/api';
+import { DashboardStats, ChartData } from '../types';
 import { toast } from 'sonner';
 import { CATEGORY_COLORS } from '@/utils/constants';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Promise.all vẫn là cách tốt nhất để gọi đồng thời
-      const [statsResponse, transactionsResponse] = await Promise.all([
-        dashboardAPI.getStats(),
-        transactionAPI.getTransactions({ sort: 'date,desc' }, 0, 5)
-      ]);
+      const month = selectedDate.getMonth() + 1;
+      const year = selectedDate.getFullYear();
 
-      // --- SỬA LỖI LOGIC QUAN TRỌNG NHẤT TẠI ĐÂY ---
-      if (statsResponse.success && statsResponse.data) {
-        setStats(statsResponse.data); // Lấy `data` từ bên trong response
-      } else {
-        throw new Error(statsResponse.message || 'Failed to load dashboard statistics.');
-      }
+      const response = await dashboardAPI.getStats(month, year);
 
-      if (transactionsResponse.success && transactionsResponse.data) {
-        // Backend trả về cấu trúc PaginatedTransactions, cần lấy `transactions` từ bên trong
-        setRecentTransactions(transactionsResponse.data.transactions ?? []);
+      if (response.success && response.data) {
+        setStats(response.data);
       } else {
-        throw new Error(transactionsResponse.message || 'Failed to load recent transactions.');
+        throw new Error(response.message || 'Failed to load dashboard data.');
       }
 
     } catch (err: any) {
@@ -60,6 +54,18 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const changeMonth = (offset: number) => {
+    setSelectedDate(prevDate => {
+      const newDate = new Date(prevDate);
+      newDate.setMonth(newDate.getMonth() + offset);
+      return newDate;
+    });
   };
 
   const prepareChartData = (data: { category: string; amount: number }[]): ChartData[] => {
@@ -70,11 +76,6 @@ export default function Home() {
     }));
   };
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  // Phần JSX còn lại không cần thay đổi
   if (isLoading) {
     return (
         <Layout>
@@ -85,22 +86,38 @@ export default function Home() {
     );
   }
 
+  const recentTransactions = stats?.recentTransactions || [];
+
   return (
       <Layout>
         <div className="space-y-6">
+          {/* Header và Bộ chọn tháng */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Welcome back, {user?.name || 'User'}!
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                Here's your financial overview for today
+                {/* --- SỬA Ở ĐÂY --- */}
+                Here's your financial overview for {selectedDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
               </p>
             </div>
-            <Button onClick={() => window.location.hash = '#/add-transaction'} className="sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Transaction
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="font-semibold text-lg w-32 text-center">
+                    {/* --- SỬA Ở ĐÂY --- */}
+                {selectedDate.toLocaleString('en-US', { month: 'long' })}
+                </span>
+              <Button variant="outline" size="icon" onClick={() => changeMonth(1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button onClick={() => navigate('/add-transaction')} className="sm:w-auto ml-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Transaction
+              </Button>
+            </div>
           </div>
 
           {stats ? (
@@ -121,12 +138,12 @@ export default function Home() {
                   <div className="bg-white dark:bg-gray-800 rounded-lg border p-8 text-center h-full flex flex-col justify-center">
                     <TrendingDown className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium">No Expense Data</h3>
-                    <p className="text-sm text-muted-foreground">Add expenses to see a breakdown.</p>
+                    <p className="text-sm text-muted-foreground">Add expenses this month to see a breakdown.</p>
                   </div>
               )}
             </div>
             <div className="lg:col-span-1">
-              <RecentTransactions transactions={recentTransactions} onViewAll={() => window.location.hash = '#/transactions'} />
+              <RecentTransactions transactions={recentTransactions} onViewAll={() => navigate('/transactions')} />
             </div>
           </div>
         </div>

@@ -6,7 +6,10 @@
 import {
     User, Transaction, LoginCredentials, RegisterCredentials,
     TransactionFormData, DashboardStats, ApiResponse, TransactionFilters, PaginatedTransactions,
-    LoginResponse, RefreshTokenRequest, RefreshTokenResponse
+    LoginResponse, RefreshTokenRequest, RefreshTokenResponse,
+    RecurringTransaction,
+    Budget,
+    BudgetDTO
 } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 
@@ -300,13 +303,11 @@ export const authAPI = {
    Transaction endpoints
 -------------------------------------------------- */
 export const transactionAPI = {
-    // --- SỬA LỖI Ở ĐÂY ---
     getTransactions: async (filters?: TransactionFilters, page = 0, size = 10): Promise<ApiResponse<PaginatedTransactions>> => {
         try {
-            // Đổi tên tham số từ 'limit' -> 'size' để khớp với backend
             const params = new URLSearchParams({
                 page: String(page),
-                size: String(size), // <-- SỬA LỖI QUAN TRỌNG NHẤT
+                size: String(size),
                 ...(filters?.sort && { sort: filters.sort }),
                 ...(filters?.type && filters.type !== 'all' && { type: filters.type }),
                 ...(filters?.category && { category: filters.category }),
@@ -315,7 +316,6 @@ export const transactionAPI = {
                 ...(filters?.dateTo && { dateTo: filters.dateTo }),
             });
 
-            // Backend trả về đối tượng Page của Spring, có cấu trúc content, totalPages, totalElements
             const data = await request<any>(`/api/transactions?${params}`);
 
             const formattedData: PaginatedTransactions = {
@@ -370,5 +370,101 @@ export const transactionAPI = {
    Dashboard endpoints
 -------------------------------------------------- */
 export const dashboardAPI = {
-    getStats: () => request<ApiResponse<DashboardStats>>('/api/dashboard/stats'),
+    getStats: async (month: number, year: number): Promise<ApiResponse<DashboardStats>> => {
+        try {
+            const params = new URLSearchParams({ month: String(month), year: String(year) });
+            const data = await request<ApiResponse<DashboardStats>>(`/api/dashboard/stats?${params}`);
+            return data;
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load dashboard stats' };
+        }
+    },
+};
+
+/* -------------------------------------------------
+   Budget endpoints
+-------------------------------------------------- */
+export const budgetAPI = {
+    getBudgets: async (month: number, year: number): Promise<ApiResponse<BudgetDTO[]>> => {
+        try {
+            const params = new URLSearchParams({ month: String(month), year: String(year) });
+            const data = await request<BudgetDTO[]>(`/api/budgets?${params}`);
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load budgets' };
+        }
+    },
+
+    createOrUpdateBudget: async (budgetData: Budget): Promise<ApiResponse<Budget>> => {
+        try {
+            const data = await request<Budget>('/api/budgets', {
+                method: 'POST',
+                body: JSON.stringify(budgetData),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to save budget' };
+        }
+    },
+
+    deleteBudget: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+        try {
+            const data = await request<{ message: string }>(`/api/budgets/${id}`, {
+                method: 'DELETE',
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to delete budget' };
+        }
+    },
+};
+
+/* -------------------------------------------------
+   Recurring Transaction endpoints (Bản cập nhật)
+-------------------------------------------------- */
+export const recurringTransactionAPI = {
+    getAll: async (): Promise<ApiResponse<RecurringTransaction[]>> => {
+        try {
+            const data = await request<RecurringTransaction[]>('/api/recurring-transactions');
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load recurring transactions' };
+        }
+    },
+
+    create: async (transactionData: Omit<RecurringTransaction, 'id'>): Promise<ApiResponse<RecurringTransaction>> => {
+        try {
+            const data = await request<RecurringTransaction>('/api/recurring-transactions', {
+                method: 'POST',
+                body: JSON.stringify(transactionData),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to create recurring transaction' };
+        }
+    },
+
+    update: async (id: string, transactionData: Partial<RecurringTransaction>): Promise<ApiResponse<RecurringTransaction>> => {
+        try {
+            const data = await request<RecurringTransaction>(`/api/recurring-transactions/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(transactionData),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to update recurring transaction' };
+        }
+    },
+
+    delete: async (id: string): Promise<ApiResponse<void>> => {
+        try {
+            // Backend trả về 204 No Content, nên kiểu dữ liệu là void
+            await request<void>(`/api/recurring-transactions/${id}`, {
+                method: 'DELETE',
+            });
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to delete recurring transaction' };
+        }
+    },
 };

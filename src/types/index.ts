@@ -1,8 +1,6 @@
 import { CATEGORIES } from "@/utils/constants";
 
 // --- ĐỊNH NGHĨA KIỂU CATEGORY ĐÃ ĐƯỢC SỬA LỖI ---
-// Lệnh này sẽ tự động tạo ra một kiểu union từ tất cả các chuỗi trong mảng CATEGORIES.
-// Ví dụ: nếu CATEGORIES = ['Food', 'Salary'], thì kiểu Category sẽ là 'Food' | 'Salary'
 export type Category = typeof CATEGORIES[number];
 
 /**
@@ -23,7 +21,7 @@ export interface Transaction {
   title: string;
   amount: number;
   date: string;
-  category: Category; // <-- Bây giờ sẽ hoạt động chính xác
+  category: Category;
   type: 'income' | 'expense';
   description?: string;
 }
@@ -44,7 +42,7 @@ export interface LoginCredentials {
 export interface RegisterCredentials {
   name: string;
   email: string;
-  username: string;
+  username:string;
   password: string;
   confirmPassword: string;
 }
@@ -53,7 +51,7 @@ export interface TransactionFormData {
   title: string;
   amount: string;
   date: string;
-  category: Category | ''; // <-- Cho phép rỗng trong form
+  category: Category | '';
   type: 'income' | 'expense' ;
 }
 
@@ -62,10 +60,8 @@ export interface TransactionFormData {
  */
 export interface TransactionFilters {
   search?: string;
-  // Cho phép giá trị 'all' để khớp với Select component
   type?: 'all' | 'income' | 'expense';
   category?: string;
-  // Thêm các thuộc tính còn thiếu
   dateFrom?: string;
   dateTo?: string;
   sort?: string;
@@ -87,6 +83,7 @@ export interface DashboardStats {
     category: string;
     amount: number;
   }[];
+  recentTransactions: Transaction[]; // <-- THÊM DÒNG NÀY ĐỂ SỬA LỖI
 }
 
 export interface ApiResponse<T> {
@@ -127,4 +124,38 @@ export interface RefreshTokenResponse {
   accessToken: string;
   tokenType: string;
   expiresIn: number;
+}
+
+export interface Budget {
+  id?: string;
+  category: string;
+  amount: number;
+  month: number;
+  year: number;
+}
+
+export interface BudgetDTO {
+  id: string;
+  category: string;
+  amount: number;
+  spentAmount: number;
+  remainingAmount: number;
+  month: number;
+  year: number;
+}
+
+// Thêm các type cho Recurring Transaction
+export type Frequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+
+export interface RecurringTransaction {
+  id?: string;
+  title: string;
+  amount: number;
+  category: string;
+  type: 'income' | 'expense';
+  frequency: Frequency;
+  startDate: string; // "YYYY-MM-DD"
+  endDate?: string; // "YYYY-MM-DD"
+  isActive: boolean;
+  nextExecutionDate?: string;
 }

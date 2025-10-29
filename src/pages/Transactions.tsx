@@ -38,10 +38,13 @@ import { Transaction, TransactionFilters } from '../types';
 import { CATEGORIES } from '../utils/constants';
 import { formatCurrency, formatDate, debounce, cn } from '../lib/utils';
 import { toast } from 'sonner';
+import { useBudgets } from '../contexts/BudgetContext'; // <-- 1. IMPORT HOOK MỚI
 
 const PAGE_SIZE = 10;
 
 export default function Transactions() {
+    const { triggerBudgetsRefresh } = useBudgets(); // <-- 2. SỬ DỤNG HOOK
+
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
@@ -149,6 +152,9 @@ export default function Transactions() {
 
             if (response.success) {
                 toast.success('Transaction deleted successfully');
+
+                triggerBudgetsRefresh(); // <-- 3. GỌI HÀM LÀM MỚI TẠI ĐÂY
+
                 if (transactions.length === 1 && currentPage > 1) {
                     setCurrentPage(currentPage - 1);
                 } else {
@@ -213,7 +219,6 @@ export default function Transactions() {
                                     <Input
                                         id="search"
                                         placeholder="Search transactions..."
-                                        // Sử dụng defaultValue thay vì value để clearFilters có thể hoạt động
                                         defaultValue={filters.search}
                                         onChange={(e) => handleSearchChange(e.target.value)}
                                         className="pl-10"
@@ -250,9 +255,6 @@ export default function Transactions() {
                                         <SelectValue placeholder="All Categories" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {/* --- SỬA LỖI --- */}
-                                        {/* Dòng <SelectItem value=""> đã được xóa vì nó vi phạm quy tắc của thư viện. */}
-                                        {/* Placeholder trong <SelectValue> ở trên sẽ tự động hiển thị khi giá trị là chuỗi rỗng. */}
                                         {CATEGORIES.map((category) => (
                                             <SelectItem key={category} value={category}>
                                                 {category}
