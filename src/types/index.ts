@@ -159,3 +159,34 @@ export interface RecurringTransaction {
   isActive: boolean;
   nextExecutionDate?: string;
 }
+
+// Wallet Types
+export type WalletType = 'PERSONAL' | 'SHARED';
+
+export interface Wallet {
+  id: string;
+  name: string;
+  type: WalletType;
+  ownerId: string;
+  createdAt: string;
+}
+
+export interface WalletMember {
+  id: string;
+  walletId: string;
+  userId: string;
+  username: string;
+  email: string;
+  role: 'OWNER' | 'MEMBER';
+  joinedAt: string;
+}
+
+export interface CreateWalletRequest {
+  name: string;
+  type: WalletType;
+}
+
+export interface InviteMemberRequest {
+  walletId: string;
+  usernameOrEmail: string;
+}

@@ -13,6 +13,7 @@ import {
 } from '../ui/dropdown-menu';
 import { useAuth } from '../../hooks/useAuth';
 import { useState, useEffect } from 'react';
+import WalletSwitcher from '../wallet/WalletSwitcher';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -80,8 +81,11 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           </div>
         </div>
 
-        {/* Right side - Theme toggle and User menu */}
+        {/* Right side - Wallet Switcher, Theme toggle and User menu */}
         <div className="flex items-center gap-2">
+          {/* Wallet Switcher */}
+          <WalletSwitcher />
+
           {/* Theme Toggle */}
           <Button
             variant="ghost"

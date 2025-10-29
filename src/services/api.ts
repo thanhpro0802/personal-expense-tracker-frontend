@@ -9,7 +9,11 @@ import {
     LoginResponse, RefreshTokenRequest, RefreshTokenResponse,
     RecurringTransaction,
     Budget,
-    BudgetDTO
+    BudgetDTO,
+    Wallet,
+    WalletMember,
+    CreateWalletRequest,
+    InviteMemberRequest
 } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
 
@@ -465,6 +469,104 @@ export const recurringTransactionAPI = {
             return { success: true };
         } catch (error: any) {
             return { success: false, message: error.message || 'Failed to delete recurring transaction' };
+        }
+    },
+};
+
+/* -------------------------------------------------
+   Wallet endpoints
+-------------------------------------------------- */
+export const walletAPI = {
+    // Get all wallets for current user
+    getWallets: async (): Promise<ApiResponse<Wallet[]>> => {
+        try {
+            const data = await request<Wallet[]>('/api/wallets');
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load wallets' };
+        }
+    },
+
+    // Get wallet by ID
+    getWallet: async (id: string): Promise<ApiResponse<Wallet>> => {
+        try {
+            const data = await request<Wallet>(`/api/wallets/${id}`);
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load wallet' };
+        }
+    },
+
+    // Create new wallet
+    createWallet: async (walletData: CreateWalletRequest): Promise<ApiResponse<Wallet>> => {
+        try {
+            const data = await request<Wallet>('/api/wallets', {
+                method: 'POST',
+                body: JSON.stringify(walletData),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to create wallet' };
+        }
+    },
+
+    // Update wallet
+    updateWallet: async (id: string, walletData: Partial<CreateWalletRequest>): Promise<ApiResponse<Wallet>> => {
+        try {
+            const data = await request<Wallet>(`/api/wallets/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(walletData),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to update wallet' };
+        }
+    },
+
+    // Delete wallet
+    deleteWallet: async (id: string): Promise<ApiResponse<void>> => {
+        try {
+            await request<void>(`/api/wallets/${id}`, {
+                method: 'DELETE',
+            });
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to delete wallet' };
+        }
+    },
+
+    // Get wallet members
+    getWalletMembers: async (walletId: string): Promise<ApiResponse<WalletMember[]>> => {
+        try {
+            const data = await request<WalletMember[]>(`/api/wallets/${walletId}/members`);
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to load wallet members' };
+        }
+    },
+
+    // Invite member to wallet
+    inviteMember: async (inviteData: InviteMemberRequest): Promise<ApiResponse<WalletMember>> => {
+        try {
+            const data = await request<WalletMember>(`/api/wallets/${inviteData.walletId}/members`, {
+                method: 'POST',
+                body: JSON.stringify({ usernameOrEmail: inviteData.usernameOrEmail }),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to invite member' };
+        }
+    },
+
+    // Remove member from wallet
+    removeMember: async (walletId: string, memberId: string): Promise<ApiResponse<void>> => {
+        try {
+            await request<void>(`/api/wallets/${walletId}/members/${memberId}`, {
+                method: 'DELETE',
+            });
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to remove member' };
         }
     },
 };
