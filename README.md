@@ -104,7 +104,10 @@ src/
 ![Add Transaction page Screenshot](./screenshots/AddTransaction.jpeg)
 ### History
 ![Transaction History page Screenshot](./screenshots/TransactionHistory.jpeg)
-
+### Budgets
+![Budgets Management page Screenshot](./screenshots/BudgetsManagement.jpeg)
+### Recurring
+![Recurring Transactions page Screenshot](./screenshots/RecurringTransactions.jpeg)
 
 ## ✨ Author
 
