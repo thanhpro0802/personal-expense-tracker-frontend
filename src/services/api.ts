@@ -468,3 +468,20 @@ export const recurringTransactionAPI = {
         }
     },
 };
+
+/* -------------------------------------------------
+   AI Chat endpoints
+-------------------------------------------------- */
+export const aiAPI = {
+    chat: async (question: string): Promise<ApiResponse<{ response: string }>> => {
+        try {
+            const data = await request<{ response: string }>('/api/ai/chat', {
+                method: 'POST',
+                body: JSON.stringify({ question }),
+            });
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error.message || 'Failed to get AI response' };
+        }
+    },
+};
