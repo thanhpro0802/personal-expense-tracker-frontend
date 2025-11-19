@@ -16,7 +16,8 @@ import { STORAGE_KEYS } from '../utils/constants';
 /* -------------------------------------------------
    Helper: baseURL & auth header
 -------------------------------------------------- */
-const API_BASE = 'http://localhost:8081';
+// Dùng biến môi trường (như hướng dẫn bảo mật) hoặc fallback localhost
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
 
 // ---- Helpers ----
 function isAuthEndpoint(endpoint: string) {
@@ -32,7 +33,6 @@ function decodeJwtExp(accessToken: string): number | null {
         const [, payload] = accessToken.split('.');
         if (!payload) return null;
         const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-        // exp là epoch seconds
         return typeof json.exp === 'number' ? json.exp : null;
     } catch {
         return null;
@@ -43,17 +43,14 @@ function computeExpiresInSecondsFromJwt(accessToken: string): number {
     const nowSec = Math.floor(Date.now() / 1000);
     const exp = decodeJwtExp(accessToken);
     if (!exp) {
-        // fallback an toàn: 15 phút
         return 15 * 60;
     }
-    // đảm bảo tối thiểu 60s để tránh jitter
     return Math.max(60, exp - nowSec);
 }
 
-// Parse JSON an toàn (tránh "Unexpected end of JSON input")
 async function parseJsonSafe<T = any>(res: Response): Promise<T | null> {
     const ct = res.headers.get('content-type') || '';
-    const text = await res.text(); // luôn đọc text trước
+    const text = await res.text();
     if (!text) return null;
     if (!ct.includes('application/json')) return null;
     try {
@@ -86,11 +83,9 @@ export class TokenManager {
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
         localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
         localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(expiryTime));
-        // Back-compat
         localStorage.setItem(STORAGE_KEYS.TOKEN, accessToken);
     }
 
-    // Tiện ích khi backend không trả expiresIn
     static setTokensFromJwt(accessToken: string, refreshToken: string): void {
         const expIn = computeExpiresInSecondsFromJwt(accessToken);
         this.setTokens(accessToken, refreshToken, expIn);
@@ -101,19 +96,16 @@ export class TokenManager {
         localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
         localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY);
         localStorage.removeItem(STORAGE_KEYS.USER);
-        // Also clear old token for backward compatibility
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
     }
 
     static isTokenExpired(): boolean {
         const expiry = this.getTokenExpiry();
         if (!expiry) return true;
-        // Consider token expired 5 minutes before actual expiry
         return Date.now() > (expiry - 5 * 60 * 1000);
     }
 
     static async refreshAccessToken(): Promise<boolean> {
-        // Prevent multiple concurrent refresh attempts
         if (this.refreshPromise) {
             return this.refreshPromise;
         }
@@ -146,9 +138,8 @@ export class TokenManager {
                 throw new Error('Invalid refresh response');
             }
 
-            // Backend hiện không trả expiresIn → tính từ JWT exp
             const newAccess = data.accessToken;
-            const newRefresh = (data as any).refreshToken || refreshToken; // server trả lại refresh cũ
+            const newRefresh = (data as any).refreshToken || refreshToken;
             this.setTokensFromJwt(newAccess, newRefresh);
             return true;
         } catch (error) {
@@ -169,7 +160,6 @@ const request = async <T>(
         headers.set('Content-Type', 'application/json');
     }
 
-    // Try to get access token, refresh if needed (except for auth endpoints)
     let token = TokenManager.getAccessToken();
 
     if (token && TokenManager.isTokenExpired() && !isAuthEndpoint(endpoint)) {
@@ -181,7 +171,6 @@ const request = async <T>(
         }
     }
 
-    // KHÔNG gắn Authorization cho /api/auth/**
     if (!isAuthEndpoint(endpoint) && isLikelyJwt(token)) {
         headers.set('Authorization', `Bearer ${token}`);
     }
@@ -192,7 +181,6 @@ const request = async <T>(
         const res = await fetch(url, config);
         const data = await parseJsonSafe<T>(res);
 
-        // Handle 401 responses with retry logic (cho endpoint bảo vệ)
         if (res.status === 401 && !isAuthEndpoint(endpoint)) {
             const refreshed = await TokenManager.refreshAccessToken();
             if (refreshed) {
@@ -231,20 +219,15 @@ const request = async <T>(
    Auth endpoints
 -------------------------------------------------- */
 export const authAPI = {
-    // Lưu ý: KHÔNG tự động gắn Authorization ở request()
     login: async (creds: LoginCredentials): Promise<ApiResponse<LoginResponse>> => {
         try {
             const data = await request<LoginResponse>('/api/auth/signin', {
                 method: 'POST',
                 body: JSON.stringify(creds),
             });
-
-            // Backend trả: { token, refreshToken, id, username, email }
-            // Tự tính expiresIn từ JWT exp để lưu
             if ((data as any)?.token && (data as any)?.refreshToken) {
                 TokenManager.setTokensFromJwt((data as any).token, (data as any).refreshToken);
             }
-
             return { success: true, data };
         } catch (error: any) {
             return { success: false, message: error.message };
@@ -269,13 +252,10 @@ export const authAPI = {
                 method: 'POST',
                 body: JSON.stringify(refreshTokenReq),
             });
-
-            // Đồng bộ storage nếu gọi trực tiếp
             if ((data as any)?.accessToken) {
                 const rt = (data as any)?.refreshToken || TokenManager.getRefreshToken();
                 TokenManager.setTokensFromJwt((data as any).accessToken, rt || '');
             }
-
             return { success: true, data };
         } catch (error: any) {
             return { success: false, message: error.message };
@@ -292,7 +272,6 @@ export const authAPI = {
             TokenManager.clearTokens();
             return { success: true, data };
         } catch (error: any) {
-            // Even if logout fails on server, clear local tokens
             TokenManager.clearTokens();
             return { success: false, message: error.message };
         }
@@ -315,15 +294,12 @@ export const transactionAPI = {
                 ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
                 ...(filters?.dateTo && { dateTo: filters.dateTo }),
             });
-
             const data = await request<any>(`/api/transactions?${params}`);
-
             const formattedData: PaginatedTransactions = {
                 transactions: data.content,
                 totalCount: data.totalElements,
                 totalPages: data.totalPages,
             };
-
             return { success: true, data: formattedData };
         } catch (error: any) {
             return { success: false, message: error.message || 'Failed to load transactions' };
@@ -420,7 +396,7 @@ export const budgetAPI = {
 };
 
 /* -------------------------------------------------
-   Recurring Transaction endpoints (Bản cập nhật)
+   Recurring Transaction endpoints
 -------------------------------------------------- */
 export const recurringTransactionAPI = {
     getAll: async (): Promise<ApiResponse<RecurringTransaction[]>> => {
@@ -458,7 +434,6 @@ export const recurringTransactionAPI = {
 
     delete: async (id: string): Promise<ApiResponse<void>> => {
         try {
-            // Backend trả về 204 No Content, nên kiểu dữ liệu là void
             await request<void>(`/api/recurring-transactions/${id}`, {
                 method: 'DELETE',
             });
@@ -470,16 +445,19 @@ export const recurringTransactionAPI = {
 };
 
 /* -------------------------------------------------
-   AI Chat endpoints
+   AI Chat endpoints (UPDATED WITH HISTORY)
 -------------------------------------------------- */
 export const aiAPI = {
-    chat: async (question: string): Promise<ApiResponse<{ response: string }>> => {
+    // Thêm timeRange vào tham số (mặc định là 'recent')
+    chat: async (question: string, history: { role: string; content: string }[] = [], timeRange: string = 'recent'): Promise<ApiResponse<{ response: string }>> => {
         try {
-            const data = await request<{ response: string }>('/api/ai/chat', {
+            const backendResponse = await request<ApiResponse<{ response: string }>>('/api/ai/chat', {
                 method: 'POST',
-                body: JSON.stringify({ question }),
+                body: JSON.stringify({ question, history, timeRange }), // Gửi timeRange đi
             });
-            return { success: true, data };
+
+            if (!backendResponse.success) throw new Error('Backend returned failure');
+            return { success: true, data: backendResponse.data };
         } catch (error: any) {
             return { success: false, message: error.message || 'Failed to get AI response' };
         }
