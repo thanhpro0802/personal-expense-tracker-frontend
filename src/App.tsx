@@ -13,6 +13,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 // --- BƯỚC 1: IMPORT CÁC TRANG MỚI ---
 import BudgetsPage from './pages/BudgetsPage';
 import RecurringTransactionsPage from './pages/RecurringTransactionsPage';
+import ChatDemo from './pages/ChatDemo';
 
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
                     {/* --- CÁC ROUTE CÔNG KHAI --- */}
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/chat-demo" element={<ChatDemo />} />
 
                     {/* --- CÁC ROUTE ĐƯỢC BẢO VỆ --- */}
                     <Route element={<ProtectedRoute />}>
