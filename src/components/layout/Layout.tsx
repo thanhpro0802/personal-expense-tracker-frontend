@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { useAuth } from '../../hooks/useAuth';
+import ChatAssistant from '../ChatAssistant';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -73,6 +74,9 @@ export default function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Chat Assistant */}
+      <ChatAssistant />
     </div>
   );
 }
