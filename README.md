@@ -104,6 +104,12 @@ src/
 ![Add Transaction page Screenshot](./screenshots/AddTransaction.jpeg)
 ### History
 ![Transaction History page Screenshot](./screenshots/TransactionHistory.jpeg)
+### Budget
+![Budget Management page Screenshot](./screenshots/BudgetsManagement.jpeg)
+### Recurring
+![Recurring Transaction page Screenshot](./screenshots/RecurringTransactions.jpeg)
+### Smart Finacial Assistant
+![Smart Finacial Assistant page Screeshot](./screenshots/smart.jpeg)
 
 
 ## ✨ Author
