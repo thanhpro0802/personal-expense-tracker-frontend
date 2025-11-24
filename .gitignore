@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Preview/demo files
+public/chart-preview.html
+public/changes-summary.html
