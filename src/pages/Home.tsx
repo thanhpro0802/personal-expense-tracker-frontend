@@ -12,16 +12,11 @@ import {
   ArrowDownRight,
   Calendar
 } from 'lucide-react';
-import Layout from '../components/layout/Layout';
-import StatsCard from '../components/dashboard/StatsCard';
-import ExpenseChart from '../components/dashboard/ExpenseChart';
-import RecentTransactions from '../components/dashboard/RecentTransactions';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../hooks/useAuth';
 import { dashboardAPI } from '../services/api';
-import { DashboardStats, ChartData } from '../types';
+import { DashboardStats } from '../types';
 import { toast } from 'sonner';
-import { CATEGORY_COLORS } from '@/utils/constants';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { AuroraBackground } from '../components/ui/AuroraBackground';
@@ -74,14 +69,6 @@ export default function Home() {
       newDate.setMonth(newDate.getMonth() + offset);
       return newDate;
     });
-  };
-
-  const prepareChartData = (data: { category: string; amount: number }[]): ChartData[] => {
-    if (!data) return [];
-    return data.map(item => ({
-      ...item,
-      color: CATEGORY_COLORS[item.category] || '#A9A9A9'
-    }));
   };
 
   if (isLoading) {
