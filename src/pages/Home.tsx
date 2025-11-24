@@ -7,23 +7,20 @@ import {
   Loader2,
   AlertCircle,
   ChevronLeft,
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  Calendar
+  ChevronRight
 } from 'lucide-react';
+import Layout from '../components/layout/Layout';
+import StatsCard from '../components/dashboard/StatsCard';
+import ExpenseChart from '../components/dashboard/ExpenseChart';
+import RecentTransactions from '../components/dashboard/RecentTransactions';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../hooks/useAuth';
 import { dashboardAPI } from '../services/api';
-import { DashboardStats } from '../types';
+import { DashboardStats, ChartData } from '../types';
 import { toast } from 'sonner';
+import { CATEGORY_COLORS } from '@/utils/constants';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { useNavigate } from 'react-router-dom';
-import { AuroraBackground } from '../components/ui/AuroraBackground';
-import { GlassCard } from '../components/ui/GlassCard';
-import { formatCurrency } from '../lib/utils';
-import { cn } from '../lib/utils';
-import { format } from 'date-fns';
 
 export default function Home() {
   const { user } = useAuth();
@@ -71,197 +68,85 @@ export default function Home() {
     });
   };
 
+  const prepareChartData = (data: { category: string; amount: number }[]): ChartData[] => {
+    if (!data) return [];
+    return data.map(item => ({
+      ...item,
+      color: CATEGORY_COLORS[item.category] || '#A9A9A9'
+    }));
+  };
+
   if (isLoading) {
     return (
-        <AuroraBackground>
-          <div className="flex items-center justify-center h-screen">
-            <Loader2 className="h-12 w-12 animate-spin text-white" />
+        <Layout>
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        </AuroraBackground>
+        </Layout>
     );
   }
 
   const recentTransactions = stats?.recentTransactions || [];
 
   return (
-      <AuroraBackground className="min-h-screen">
-        <div className="container mx-auto px-4 py-8 space-y-8">
-          {/* Transparent Navbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <Layout>
+        <div className="space-y-6">
+          {/* Header và Bộ chọn tháng */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white drop-shadow-lg">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Welcome back, {user?.name || 'User'}!
               </h1>
-              <p className="text-white/80 mt-1">
+              <p className="text-gray-600 dark:text-gray-400">
+                {/* --- SỬA Ở ĐÂY --- */}
                 Here's your financial overview for {selectedDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => changeMonth(-1)}
-                className="bg-white/10 border-white/20 hover:bg-white/20 text-white backdrop-blur-sm"
-              >
+              <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="font-semibold text-lg w-32 text-center text-white">
+              <span className="font-semibold text-lg w-32 text-center">
+                    {/* --- SỬA Ở ĐÂY --- */}
                 {selectedDate.toLocaleString('en-US', { month: 'long' })}
-              </span>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => changeMonth(1)}
-                className="bg-white/10 border-white/20 hover:bg-white/20 text-white backdrop-blur-sm"
-              >
+                </span>
+              <Button variant="outline" size="icon" onClick={() => changeMonth(1)}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button 
-                onClick={() => navigate('/add-transaction')} 
-                className="sm:w-auto ml-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
-              >
+              <Button onClick={() => navigate('/add-transaction')} className="sm:w-auto ml-4">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Transaction
               </Button>
             </div>
           </div>
 
-          {/* Stats Cards */}
           {stats ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <GlassCard className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-white/70">Total Income</p>
-                      <div className="mt-2 flex items-baseline">
-                        <p className="text-3xl font-bold text-white">
-                          {formatCurrency(stats.totalIncome)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-full bg-green-500/20 backdrop-blur-sm">
-                      <TrendingUp className="h-6 w-6 text-green-400" />
-                    </div>
-                  </div>
-                </GlassCard>
-
-                <GlassCard className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-white/70">Total Expenses</p>
-                      <div className="mt-2 flex items-baseline">
-                        <p className="text-3xl font-bold text-white">
-                          {formatCurrency(stats.totalExpenses)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-full bg-red-500/20 backdrop-blur-sm">
-                      <TrendingDown className="h-6 w-6 text-red-400" />
-                    </div>
-                  </div>
-                </GlassCard>
-
-                <GlassCard className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-white/70">Current Balance</p>
-                      <div className="mt-2 flex items-baseline">
-                        <p className="text-3xl font-bold text-white">
-                          {formatCurrency(stats.currentBalance)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-full bg-blue-500/20 backdrop-blur-sm">
-                      <Wallet className="h-6 w-6 text-blue-400" />
-                    </div>
-                  </div>
-                </GlassCard>
+                <StatsCard title="Total Income" value={stats.totalIncome} icon={TrendingUp} />
+                <StatsCard title="Total Expenses" value={stats.totalExpenses} icon={TrendingDown} />
+                <StatsCard title="Current Balance" value={stats.currentBalance} icon={Wallet} />
               </div>
           ) : (
-              error && (
-                <GlassCard className="p-6">
-                  <Alert variant="destructive" className="bg-transparent border-red-500/50">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Statistics Unavailable</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                </GlassCard>
-              )
+              error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Statistics Unavailable</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
           )}
 
-          {/* Recent Transactions */}
-          <GlassCard className="p-6">
-            <div className="flex flex-row items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Recent Transactions</h2>
-                <p className="text-white/60 text-sm mt-1">Your latest financial activity</p>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate('/transactions')}
-                className="bg-white/10 border-white/20 hover:bg-white/20 text-white backdrop-blur-sm"
-              >
-                View All
-              </Button>
-            </div>
-            <div className="space-y-4">
-              {recentTransactions.length === 0 ? (
-                <div className="text-center py-8">
-                  <Wallet className="h-12 w-12 text-white/40 mx-auto mb-3" />
-                  <p className="text-white/60">No transactions yet</p>
-                  <p className="text-sm text-white/40">Add your first transaction to get started</p>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              {stats && stats.expenseByCategory && stats.expenseByCategory.length > 0 ? (
+                  <ExpenseChart data={prepareChartData(stats.expenseByCategory)} totalExpenses={stats.totalExpenses} />
               ) : (
-                recentTransactions.slice(0, 5).map((transaction) => (
-                  <div 
-                    key={transaction.id}
-                    className="flex items-center justify-between py-3 border-b border-white/10 last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'p-2 rounded-full backdrop-blur-sm',
-                        transaction.type === 'income' 
-                          ? 'bg-green-500/20' 
-                          : 'bg-red-500/20'
-                      )}>
-                        {transaction.type === 'income' ? (
-                          <ArrowUpRight className="h-4 w-4 text-green-400" />
-                        ) : (
-                          <ArrowDownRight className="h-4 w-4 text-red-400" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-white">
-                          {transaction.title}
-                        </p>
-                        <div className="flex items-center gap-2 text-sm text-white/60">
-                          <span>{transaction.category}</span>
-                          <span>•</span>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(transaction.date), 'MMM dd, yyyy')}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={cn(
-                        'font-semibold',
-                        transaction.type === 'income' 
-                          ? 'text-green-400' 
-                          : 'text-red-400'
-                      )}>
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {formatCurrency(transaction.amount)}
-                      </p>
-                    </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border p-8 text-center h-full flex flex-col justify-center">
+                    <TrendingDown className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium">No Expense Data</h3>
+                    <p className="text-sm text-muted-foreground">Add expenses this month to see a breakdown.</p>
                   </div>
-                ))
               )}
             </div>
-          </GlassCard>
+            <div className="lg:col-span-1">
+              <RecentTransactions transactions={recentTransactions} onViewAll={() => navigate('/transactions')} />
+            </div>
+          </div>
         </div>
-      </AuroraBackground>
+      </Layout>
   );
 }
