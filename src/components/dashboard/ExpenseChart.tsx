@@ -20,7 +20,7 @@ interface ExpenseChartProps {
 
 export default function ExpenseChart({ data, totalExpenses }: ExpenseChartProps) {
   /**
-   * Custom tooltip for pie chart
+   * Custom tooltip with Glassmorphism style
    */
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -28,14 +28,14 @@ export default function ExpenseChart({ data, totalExpenses }: ExpenseChartProps)
       const percentage = ((data.value / totalExpenses) * 100).toFixed(1);
       
       return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
-          <p className="font-medium text-gray-900 dark:text-white">
+        <div className="backdrop-blur-md bg-background/95 border border-border rounded-lg shadow-xl p-3">
+          <p className="font-semibold text-foreground mb-1">
             {data.payload.category}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Amount: ${data.value.toFixed(2)}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Percentage: {percentage}%
           </p>
         </div>
@@ -80,9 +80,13 @@ export default function ExpenseChart({ data, totalExpenses }: ExpenseChartProps)
                     data={chartData}
                     cx="50%"
                     cy="50%"
+                    innerRadius={60}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="amount"
+                    paddingAngle={2}
+                    stroke="hsl(var(--background))"
+                    strokeWidth={2}
                     label={({ category, value }) =>
                         `${category}: $${(value ?? 0).toFixed(0)}`
                     }
@@ -104,17 +108,28 @@ export default function ExpenseChart({ data, totalExpenses }: ExpenseChartProps)
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke="hsl(var(--border))" 
+                    opacity={0.3}
+                    vertical={false}
+                  />
                   <XAxis 
                     dataKey="category" 
-                    className="text-gray-600 dark:text-gray-400"
+                    stroke="hsl(var(--muted-foreground))"
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
                     angle={-45}
                     textAnchor="end"
                     height={80}
                   />
-                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -133,7 +148,7 @@ export default function ExpenseChart({ data, totalExpenses }: ExpenseChartProps)
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+              <span className="text-sm text-muted-foreground truncate">
                 {item.category}
               </span>
             </div>
