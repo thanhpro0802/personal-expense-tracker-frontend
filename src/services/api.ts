@@ -17,7 +17,7 @@ import { STORAGE_KEYS } from '../utils/constants';
    Helper: baseURL & auth header
 -------------------------------------------------- */
 // Dùng biến môi trường (như hướng dẫn bảo mật) hoặc fallback localhost
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://personal-expense-tracker-backend-env.eba-3qemxhwu.ap-southeast-1.elasticbeanstalk.com';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://personal-expense-tracker-backend-production-364a.up.railway.app';
 
 // ---- Helpers ----
 function isAuthEndpoint(endpoint: string) {
